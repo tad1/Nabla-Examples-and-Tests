@@ -10,6 +10,7 @@ if(NBL_BUILD_EXAMPLES)
 		nbl_android_create_media_storage_apk()
 	endif()
 	add_subdirectory(A00_Triangle EXCLUDE_FROM_ALL)
+	add_subdirectory(A01_TriangleAnimation EXCLUDE_FROM_ALL)
 	# showcase the use of `nbl::core`,`nbl::system` and `nbl::asset`
 	add_subdirectory(01_HelloCoreSystemAsset EXCLUDE_FROM_ALL)
 	# showcase the use of `system::IApplicationFramework` and `nbl::video`
