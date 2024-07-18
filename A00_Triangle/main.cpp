@@ -101,7 +101,7 @@ public:
 						.extent = {fb->getCreationParameters().width,fb->getCreationParameters().height}
 					}
 				};
-				cmdbuf->beginRenderPass(info, IGPUCommandBuffer::SUBPASS_CONTENTS::SECONDARY_COMMAND_BUFFERS);
+				cmdbuf->beginRenderPass(info, IGPUCommandBuffer::SUBPASS_CONTENTS::INLINE);
 			}
 			cmdbuf->bindGraphicsPipeline(m_pipeline.get());
 			{
