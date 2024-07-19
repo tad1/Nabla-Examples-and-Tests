@@ -127,7 +127,7 @@ public:
 			//{
 			PushConstants constants;
 			constants.phase = sinf((float)(m_submitIx % DURATION) * 2 / (float)DURATION);
-			cmdbuf->pushConstants(m_pipeline->getLayout(), IGPUShader::ESS_FRAGMENT, 0, sizeof(PushConstants), &constants);
+			cmdbuf->pushConstants(m_pipeline->getLayout(), IGPUShader::ESS_VERTEX, 0, sizeof(PushConstants), &constants);
 			//cmdbuf->bindDescriptorSets(nbl::asset::EPBP_GRAPHICS, m_pipeline->getLayout(), 3, 1, &m_gpuDescriptorSet.get());
 			cmdbuf->draw(3, 1, 0, 0);
 			//}
@@ -389,7 +389,7 @@ public:
 				.binding = 0u,
 				.type = asset::IDescriptor::E_TYPE::ET_UNIFORM_BUFFER,
 				.createFlags = IGPUDescriptorSetLayout::SBinding::E_CREATE_FLAGS::ECF_NONE,
-				.stageFlags = asset::IShader::ESS_VERTEX | asset::IShader::ESS_FRAGMENT,
+				.stageFlags = asset::IShader::ESS_VERTEX,
 				.count = 1u,
 			}
 		};
