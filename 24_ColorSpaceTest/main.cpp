@@ -137,7 +137,7 @@ class ColorSpaceTestSampleApp final : public examples::SimpleWindowedApplication
 					.binding = 0,
 					.type = IDescriptor::E_TYPE::ET_COMBINED_IMAGE_SAMPLER,
 					.createFlags = IGPUDescriptorSetLayout::SBinding::E_CREATE_FLAGS::ECF_NONE,
-					.stageFlags = IShader::ESS_FRAGMENT,
+					.stageFlags = IShader::E_SHADER_STAGE::ESS_FRAGMENT,
 					.count = 1,
 					.immutableSamplers = &defaultSampler
 				}
@@ -148,7 +148,7 @@ class ColorSpaceTestSampleApp final : public examples::SimpleWindowedApplication
 
 			}
 
-			ISwapchain::SCreationParams swapchainParams = {.surface=m_surface->getSurface()};
+			ISwapchain::SCreationParams swapchainParams = {.surface=smart_refctd_ptr<ISurface>(m_surface->getSurface())};
 			// Need to choose a surface format
 			if (!swapchainParams.deduceFormat(m_physicalDevice))
 				return logFail("Could not choose a Surface Format for the Swapchain!");
@@ -188,7 +188,7 @@ class ColorSpaceTestSampleApp final : public examples::SimpleWindowedApplication
 			// Now create the pipeline
 			{
 				const asset::SPushConstantRange range = {
-					.stageFlags = IShader::ESS_FRAGMENT,
+					.stageFlags = IShader::E_SHADER_STAGE::ESS_FRAGMENT,
 					.offset = 0,
 					.size = sizeof(push_constants_t)
 				};
@@ -396,7 +396,9 @@ class ColorSpaceTestSampleApp final : public examples::SimpleWindowedApplication
 					}};
 					cmdbuf->pipelineBarrier(E_DEPENDENCY_FLAGS::EDF_NONE,{.imgBarriers=imgBarriers});
 					// upload contents and submit right away
-					m_utils->updateImageViaStagingBufferAutoSubmit(m_intendedSubmit,origImage->getBuffer(),origImage->getCreationParameters().format,gpuImg.get(),IGPUImage::LAYOUT::TRANSFER_DST_OPTIMAL,origImage->getRegions());
+					const std::span <const IImage::SBufferCopy> regions = origImage->getRegions();
+					const core::SRange<const IImage::SBufferCopy> srange = {regions.data(), regions.data()+regions.size()};
+					m_utils->updateImageViaStagingBufferAutoSubmit(m_intendedSubmit,origImage->getBuffer(),origImage->getCreationParameters().format,gpuImg.get(),IGPUImage::LAYOUT::TRANSFER_DST_OPTIMAL,srange);
 
 					IGPUImageView::SCreationParams viewParams = {
 						.image = gpuImg,
@@ -489,7 +491,7 @@ class ColorSpaceTestSampleApp final : public examples::SimpleWindowedApplication
 					cmdbuf->beginRenderPass(info,IGPUCommandBuffer::SUBPASS_CONTENTS::INLINE);
 				}
 				cmdbuf->bindGraphicsPipeline(m_pipeline.get());
-				cmdbuf->pushConstants(m_pipeline->getLayout(),IGPUShader::ESS_FRAGMENT,0,sizeof(push_constants_t),&pc);
+				cmdbuf->pushConstants(m_pipeline->getLayout(),IGPUShader::E_SHADER_STAGE::ESS_FRAGMENT,0,sizeof(push_constants_t),&pc);
 				cmdbuf->bindDescriptorSets(nbl::asset::EPBP_GRAPHICS,m_pipeline->getLayout(),3,1,&ds);
 				ext::FullScreenTriangle::recordDrawCall(cmdbuf);
 				cmdbuf->endRenderPass();
