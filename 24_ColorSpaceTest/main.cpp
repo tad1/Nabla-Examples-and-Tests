@@ -85,6 +85,21 @@ class ColorSpaceTestSampleApp final : public examples::SimpleWindowedApplication
 				.implicit_value(true)
 				.help("Update test result references with current test result data.");
 
+			program.add_argument("--python")
+				.help("Path to python interpreter");
+
+			program.add_argument("--perf")
+				.help("If set enables perf, associated name for current perf");
+
+			program.add_argument("--perf-output")
+				.help("Path to output from perf scripts");
+
+			program.add_argument("--perf-list")
+				.help("File path to ....");
+
+			program.add_argument("--perf-input-log")
+				.help("(temporary) File to output log");
+
 			try
 			{
 				program.parse_args({ argv.data(), argv.data() + argv.size() });
@@ -104,6 +119,47 @@ class ColorSpaceTestSampleApp final : public examples::SimpleWindowedApplication
 					options.tests.enabled = true;
 					options.tests.mode = *test;
 					options.tests.updateReferences = program.get<bool>("--update-references");
+				}
+			}
+
+			{
+				const auto perf = program.present("--perf");
+				
+				if (perf) {
+					const auto interpreter = program.present("--python");
+					const auto scriptList = program.present("--perf-list");
+					const auto outputDir = program.present("--perf-output");
+					const auto inputLog = program.present("--perf-input-log");
+					{
+						if (!interpreter) {
+							logFail("Python interpreter for perf was not specified!");
+							exit(0x45);
+						}
+
+						//TODO: check if file exists
+						if (!scriptList) {
+							logFail("Perf script list was not specified!");
+							exit(0x45);
+						}
+
+						if (!outputDir) {
+							logFail("Output dir for perfs was not specified!");
+							exit(0x45);
+						}
+
+						if (!inputLog) {
+							logFail("Output dir for perfs was not specified!");
+							exit(0x45);
+						}
+					}
+
+					options.perf.enabled = true;
+					options.perf.name = *perf;
+					options.perf.interpreter = *interpreter;
+					options.perf.output = *outputDir;
+					options.perf.scriptList = *scriptList;
+					options.perf.logFile = *inputLog;
+					//TODO: handle directory
 				}
 			}
 
@@ -965,8 +1021,53 @@ class ColorSpaceTestSampleApp final : public examples::SimpleWindowedApplication
 			return false;
 		}
 
+		inline void performTests() {
+			if (!options.perf.enabled) return;
+
+			// here's a current state; we need access to data logs
+			//	we could rely, that logger stores info in specific file
+			//	is that too much coupling?
+			// we should specify input for scripts ; rather than file path
+
+			// This is terrible; I'm out of the time today and just wanted to make this working
+			// the idea is to accept coupling between output log formatting, and python script ; and use that in design
+			//	- we execute sequentially all scripts with python interpreter
+			//	- adding perf "test" in C++ code is adding log entry
+			//	- additionally you create a python script; and update perfScriptList.txt you want to use
+			//	- with something like `ctest --perf "NAME"` we add to DB (bunch of CSV files) entries
+			//	- scripts keep versioned - if we change fomratting of log; we update script
+			//		but we should keep the same data format
+			
+			// - it's just; and only about string processing job - does it really needs python? good question
+			// - short-term: it gives programmer clear reference on performance as they test different approaches
+			// - mid-term: performance regression test ; git bisection - more for finding overhead; performance drop
+
+			system::path outputPath;
+			std::ifstream scriptListFile = std::ifstream(options.perf.scriptList);
+			std::string nextPath = {};
+			std::string cmd = {};
+
+			while (std::getline(scriptListFile, nextPath)) {
+				if (nextPath == "" || nextPath[0] == ';')
+					continue;
+
+				// yes, awful string formatting (temporary)
+				cmd = options.perf.interpreter.string() + " " + nextPath + " --outputDir " + options.perf.output.string() + " --name " + options.perf.name + " --logFile " + options.perf.logFile.string();
+				m_logger->log("Executing: %s", ILogger::ELL_INFO, cmd.c_str());
+				// currently using std::system; this requires consulting
+				std::system(cmd.c_str());
+			}
+
+		}
+
 		inline bool onAppTerminated() override
 		{
+
+			if (options.perf.enabled)
+			{
+				performTests();
+			}
+
 			if (options.tests.enabled)
 			{
 				m_logger->log("Testing completed!", ILogger::ELL_PERFORMANCE);
@@ -1087,6 +1188,15 @@ class ColorSpaceTestSampleApp final : public examples::SimpleWindowedApplication
 				} count;
 
 			} tests;
+
+			struct
+			{
+				bool enabled = false;
+				std::string name = {};
+				system::path interpreter = {}, output = {}, scriptDir = {}, scriptList = {};
+				//NOTE: temporary solution
+				system::path logFile = {};
+			} perf;
 
 			bool verbose = false;
 		} options;
